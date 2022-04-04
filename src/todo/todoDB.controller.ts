@@ -17,6 +17,7 @@ import { UpdateTodoDto } from './update-todo.dto';
 import { UpdateResult } from "typeorm/query-builder/result/UpdateResult";
 import { DeleteResult } from "typeorm/query-builder/result/DeleteResult";
 import { SearchTodoDto } from "./dto/search-todo.dto";
+import { StatsDto } from "./dto/stats.dto";
 @Controller({
   path: 'todo',
   version: '2',
@@ -28,6 +29,19 @@ export class TodoDBController {
     return this.todoService.findAll(searchTodoDto);
   }
 
+
+
+
+  @Get("/stats")
+  getTodosNbByStat(@Query() statsDto: StatsDto): Promise<any> {
+    return this.todoService.findByStats(statsDto);
+  }
+
+
+
+
+
+  
   @Post()
   addTodo(@Body() newTodoData: Partial<TodoEntity>): Promise<TodoEntity> {
     return this.todoService.addTodo(newTodoData);

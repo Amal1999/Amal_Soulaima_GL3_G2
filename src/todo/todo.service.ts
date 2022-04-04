@@ -6,9 +6,30 @@ import { UpdateTodoDto } from './update-todo.dto';
 import { DeleteResult } from 'typeorm/query-builder/result/DeleteResult';
 import { UpdateResult } from 'typeorm/query-builder/result/UpdateResult';
 import { SearchTodoDto } from './dto/search-todo.dto';
+import { copyFileSync } from 'fs';
+import { take } from 'rxjs';
+import { StatsDto } from './dto/stats.dto';
 
 @Injectable()
 export class TodoService {
+
+  //Exercice 3
+  findByStats(statsDto: StatsDto): Promise<any> {
+
+    const qb = this.todoRepository.createQueryBuilder("todo");
+
+    //date1 < date2 (YYYY-MM-DD) format tested
+    if(statsDto.date1&&statsDto.date2)
+    return qb.select("status,count(*) ")
+    .where(`createdAt BETWEEN '${statsDto.date1}' AND '${statsDto.date2}'`)
+    .groupBy("status")
+    .getRawMany();
+
+    //date1 and date2 are null
+    return qb.select("status,count(*) ")
+    .groupBy("status")
+    .getRawMany();
+  }
   constructor(
     @InjectRepository(TodoEntity)
     private todoRepository: Repository<TodoEntity>,
@@ -54,15 +75,37 @@ export class TodoService {
 
   findAll(searchTodoDto: SearchTodoDto): Promise<TodoEntity[]> {
     const criterias = [];
+    const firstCondition:any ={};
+    const secondCondition:any ={};
+    var test:any={};
+
     if (searchTodoDto.status) {
-      criterias.push({ status: searchTodoDto.status });
+      firstCondition.status = searchTodoDto.status;
+      secondCondition.status = searchTodoDto.status;
     }
+
     if (searchTodoDto.criteria) {
-      criterias.push({ name: Like(`%${searchTodoDto.criteria}%`) });
-      criterias.push({ description: Like(`%${searchTodoDto.criteria}%`) });
+      firstCondition.name = Like(`%${searchTodoDto.criteria}%`);
+      secondCondition.description= Like(`%${searchTodoDto.criteria}%`);
     }
+
+    // offset doesn't work without take
+    if(searchTodoDto.take)
+    {
+      if(searchTodoDto.skip)
+      {
+        test.skip = searchTodoDto.skip;
+      }
+      test.take = searchTodoDto.take;
+    }
+
+
+    criterias.push(firstCondition);
+    criterias.push(secondCondition);
+    
+
     if (criterias.length) {
-      return this.todoRepository.find({ withDeleted: true, where: criterias });
+      return this.todoRepository.find({ withDeleted: true ,where: criterias,skip:test.skip??0,take:test.take??0});
     }
     return this.todoRepository.find({ withDeleted: true});
   }
